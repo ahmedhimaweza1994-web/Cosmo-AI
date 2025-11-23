@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Copy of Nexus AI Marketing",
+  "description": "A production-ready, end-to-end AI marketing platform automating branding, strategy, content generation, and publishing using the latest Gemini, Imagen, and Veo models.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
