@@ -3,7 +3,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { ImageModel, VideoModel, TextModel, CompanyProfile, MarketingPlan, ChatStep, WebsiteAnalysis } from '../types';
 
 const getClient = () => {
-  const apiKey = process.env.API_KEY;
+  // In browser (Vite), use VITE_ prefixed env var. In Node.js (server), use regular env var
+  const apiKey = import.meta.env?.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY;
   if (!apiKey) {
     console.warn("API Key not found. Functionality will be limited.");
     throw new Error("API Key missing");
@@ -41,7 +42,7 @@ export const analyzeWebsite = async (url: string, language: 'en' | 'ar' = 'en'):
       contents: prompt,
       config: { responseMimeType: 'application/json' }
     });
-    
+
     const data = JSON.parse(response.text || "{}");
     return {
       url,
@@ -73,10 +74,10 @@ export const sendOnboardingMessage = async (
   collectedData: Partial<CompanyProfile>
 ): Promise<string> => {
   const ai = getClient();
-  
+
   const lang = collectedData.language || 'en';
   const isArabic = lang === 'ar';
-  
+
   // Randomize the "Vibe" of the AI for this specific turn to make it feel alive and non-repetitive
   const vibes = [
     "Curious & Enthusiastic (excited to learn more)",
@@ -88,19 +89,19 @@ export const sendOnboardingMessage = async (
 
   let strategicGoal = "";
   let contextNote = "";
-  
+
   // Define the "Hidden Objective" for the AI, but let it choose the words.
-  switch(currentStep) {
+  switch (currentStep) {
     case ChatStep.LANGUAGE_SELECT:
       // This is usually handled by the UI, but if we fall through:
       strategicGoal = "Greet them warmly and ask for their name to start the collaboration.";
       break;
-    
+
     case ChatStep.USER_INTRO:
       strategicGoal = "Goal: Build rapport instantly. React to their name if given. If you have the name, casually ask what they are passionate about or what their 'superpower' is. DO NOT just say 'nice to meet you'. Be charming.";
       contextNote = "We need to know who they are to personalize the experience.";
       break;
-      
+
     case ChatStep.COMPANY_INTRO:
       strategicGoal = "Goal: Segue into business naturally. Ask about their project/company. What are they building? Ask for the Website URL if they have one, or just the name and industry if not.";
       contextNote = "React to their previous interest/hobby if possible before switching topics.";
@@ -109,12 +110,12 @@ export const sendOnboardingMessage = async (
     case ChatStep.WEBSITE_VERIFY:
       strategicGoal = "Goal: Present the data found. Ask them to confirm if the analysis on the card looks correct or if they want to tweak it. Keep it brief.";
       break;
-      
+
     case ChatStep.GOALS:
       strategicGoal = "Goal: Dig deep into their ambition. Don't just ask 'what are your goals?'. Ask 'What does success look like for you this month?' or 'Are we chasing sales or fame right now?'. Make it sound exciting.";
       contextNote = `They are in the ${collectedData.industry} industry. Tailor the question to that.`;
       break;
-      
+
     case ChatStep.BRANDING_LOGO:
       strategicGoal = "Goal: Branding Check. Ask if they already have a logo they love (to upload), or if they want to see your creative magic and generate one.";
       break;
@@ -123,7 +124,7 @@ export const sendOnboardingMessage = async (
       strategicGoal = "Goal: Creative Direction. Since we are generating a logo, ask about their taste. Do they like Minimalist? Retro? Cyberpunk? Ask for a specific vibe or color palette.";
       contextNote = "You are acting as a Lead Designer now.";
       break;
-      
+
     case ChatStep.BRANDING_FILES:
       strategicGoal = "Goal: Asset Collection. Cheerfully ask if they have any product photos, team shots, or assets to add to the mix. Encourage them that 'the more the better'.";
       break;
@@ -131,7 +132,7 @@ export const sendOnboardingMessage = async (
     case ChatStep.DESIGN_PREFS:
       strategicGoal = "Goal: Visual Taste for Marketing. Ask what kind of social media aesthetic stops their scroll. Modern? Bold? Elegant? We need this for the posts.";
       break;
-      
+
     case ChatStep.PLANNING:
       strategicGoal = "Goal: Logistics. We need a budget (even a rough one) and their favorite platforms (Insta, LinkedIn, etc) to finalize the plan.";
       break;
@@ -166,7 +167,7 @@ export const sendOnboardingMessage = async (
   const chat = ai.chats.create({
     model: 'gemini-2.5-flash',
     history: history,
-    config: { 
+    config: {
       systemInstruction,
       temperature: 0.9, // Higher temperature for more creative/varied responses
     },
@@ -223,7 +224,7 @@ export const extractProfileFromChat = async (chatHistoryText: string): Promise<P
 export const generateFullMarketingPackage = async (profile: CompanyProfile): Promise<MarketingPlan> => {
   const ai = getClient();
   const isArabic = profile.language === 'ar';
-  
+
   // Complex reasoning task: use Pro model
   const prompt = `
     Create a complete comprehensive marketing plan for:
@@ -270,7 +271,7 @@ export const generateFullMarketingPackage = async (profile: CompanyProfile): Pro
 
 export const generateImage = async (prompt: string, model: ImageModel): Promise<string> => {
   const ai = getClient();
-  
+
   try {
     if (model === ImageModel.IMAGEN) {
       const response = await ai.models.generateImages({
@@ -286,7 +287,7 @@ export const generateImage = async (prompt: string, model: ImageModel): Promise<
         model: model,
         contents: prompt,
       });
-      
+
       for (const part of response.candidates?.[0]?.content?.parts || []) {
         if (part.inlineData) {
           return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
@@ -302,12 +303,12 @@ export const generateImage = async (prompt: string, model: ImageModel): Promise<
 
 export const generateVideo = async (prompt: string, model: VideoModel): Promise<string> => {
   const ai = getClient();
-  
+
   try {
     // Check API Key selection for Veo
-    if (window.aistudio && window.aistudio.hasSelectedApiKey) {
-         const hasKey = await window.aistudio.hasSelectedApiKey();
-         if (!hasKey) await window.aistudio.openSelectKey();
+    if ((window as any).aistudio && (window as any).aistudio.hasSelectedApiKey) {
+      const hasKey = await (window as any).aistudio.hasSelectedApiKey();
+      if (!hasKey) await (window as any).aistudio.openSelectKey();
     }
 
     let operation = await ai.models.generateVideos({
@@ -322,7 +323,8 @@ export const generateVideo = async (prompt: string, model: VideoModel): Promise<
     }
 
     const videoUri = operation.response?.generatedVideos?.[0]?.video?.uri;
-    return videoUri ? `${videoUri}&key=${process.env.API_KEY}` : "";
+    const apiKey = import.meta.env?.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+    return videoUri ? `${videoUri}&key=${apiKey}` : "";
   } catch (error) {
     console.error("Video gen error", error);
     throw error;
@@ -336,4 +338,90 @@ export const generateCaption = async (prompt: string, platform: string): Promise
     contents: `Write a creative and engaging social media caption for ${platform} based on this idea: ${prompt}. Include emojis and hashtags.`,
   });
   return response.text || "";
+};
+
+// --- Brand Identity Generation ---
+
+export const generateBrandAsset = async (
+  type: 'colors' | 'typography' | 'voice' | 'assets',
+  context: CompanyProfile,
+  model: string = 'gemini-2.5-flash'
+): Promise<any> => {
+  const ai = getClient();
+  const isArabic = context.language === 'ar';
+
+  let prompt = "";
+
+  if (type === 'colors') {
+    prompt = `
+      Generate a color palette for a ${context.industry} company named "${context.name}".
+      Description: ${context.description}
+      Mood: ${context.branding.mood || 'Professional'}
+      
+      Return JSON:
+      {
+        "primaryColor": "#hex",
+        "secondaryColor": "#hex",
+        "accentColor": "#hex",
+        "backgroundColor": "#hex"
+      }
+    `;
+  } else if (type === 'typography') {
+    prompt = `
+      Suggest a font pairing for a ${context.industry} company named "${context.name}".
+      Mood: ${context.branding.mood || 'Modern'}
+      
+      Return JSON:
+      {
+        "fontHeading": "Font Name (e.g. Inter, Playfair Display)",
+        "fontBody": "Font Name (e.g. Roboto, Open Sans)",
+        "fontPairing": "Heading/Body"
+      }
+    `;
+  } else if (type === 'voice') {
+    prompt = `
+      Define the brand voice for "${context.name}" (${context.industry}).
+      Target Audience: ${context.targetAudience}
+      Language: ${isArabic ? 'Arabic' : 'English'}
+      
+      Return JSON:
+      {
+        "voiceTone": "2 sentences describing the tone (e.g. Friendly, Authoritative). Write in ${isArabic ? 'Arabic' : 'English'}.",
+        "brandValues": ["Value 1", "Value 2", "Value 3"],
+        "voiceDos": ["Do 1: Use active voice", "Do 2: Focus on benefits", "Do 3: Keep it simple"],
+        "voiceDonts": ["Don't 1: Avoid jargon", "Don't 2: Don't be overly formal", "Don't 3: Don't use clichés"]
+      }
+    `;
+  } else if (type === 'assets') {
+    prompt = `
+      Generate image prompts for brand assets for "${context.name}" (${context.industry}).
+      Description: ${context.description}
+      Brand Colors: ${context.branding.primaryColor}, ${context.branding.secondaryColor}
+      Mood: ${context.branding.mood || 'Professional'}
+      
+      Return JSON with image generation prompts:
+      {
+        "coverImagePrompt": "Detailed prompt for a social media cover image (1500x500px)",
+        "socialBannerPrompt": "Detailed prompt for an Instagram/Facebook ad banner (1080x1080px)",
+        "businessCardPrompt": "Detailed prompt for a business card design"
+      }
+    `;
+  }
+
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: prompt,
+      config: { responseMimeType: 'application/json' }
+    });
+    return JSON.parse(response.text || "{}");
+  } catch (e) {
+    console.error(`Failed to generate ${type}`, e);
+    throw e;
+  }
+};
+
+export const generateBrandLogo = async (context: CompanyProfile, style: string, model: ImageModel): Promise<string> => {
+  const prompt = `Vector logo for ${context.name} (${context.industry}). Style: ${style}. Minimalist, clean background, high quality.`;
+  return await generateImage(prompt, model);
 };

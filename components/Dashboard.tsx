@@ -28,22 +28,30 @@ const StatCard = ({ title, value, icon: Icon, trend, color }: any) => (
 export const Dashboard: React.FC = () => {
   const [selectedPlatform, setSelectedPlatform] = useState<string>('ALL');
   const [currentUser] = useState(db.getSession());
-  const [company] = useState<CompanyProfile | undefined>(
-    currentUser ? db.getActiveCompanyForUser(currentUser.id) : undefined
-  );
+  const [company, setCompany] = useState<CompanyProfile | undefined>(undefined);
   const { t, isRTL } = useLanguage();
+
+  React.useEffect(() => {
+    const fetchCompany = async () => {
+      if (currentUser) {
+        const data = await db.getActiveCompanyForUser(currentUser.id);
+        setCompany(data);
+      }
+    };
+    fetchCompany();
+  }, [currentUser]);
 
   const accounts = company?.socialAccounts?.filter(a => a.connected && a.metrics) || [];
   const hasConnections = accounts.length > 0;
 
   // --- Aggregate Metrics based on Filter ---
   const aggregatedStats = useMemo(() => {
-    const filteredAccounts = selectedPlatform === 'ALL' 
-      ? accounts 
+    const filteredAccounts = selectedPlatform === 'ALL'
+      ? accounts
       : accounts.filter(a => a.platform === selectedPlatform);
 
     if (filteredAccounts.length === 0) {
-       return null;
+      return null;
     }
 
     const totalReach = filteredAccounts.reduce((acc, curr) => acc + (curr.metrics?.reach || 0), 0);
@@ -54,18 +62,18 @@ export const Dashboard: React.FC = () => {
 
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const chartData = days.map(day => {
-       let dailyReach = 0;
-       let dailyEng = 0;
-       
-       filteredAccounts.forEach(acc => {
-          const dayData = acc.metrics?.history.find(h => h.date === day);
-          if (dayData) {
-            dailyReach += dayData.reach;
-            dailyEng += dayData.engagement;
-          }
-       });
+      let dailyReach = 0;
+      let dailyEng = 0;
 
-       return { name: day, reach: dailyReach, engagement: dailyEng };
+      filteredAccounts.forEach(acc => {
+        const dayData = acc.metrics?.history.find(h => h.date === day);
+        if (dayData) {
+          dailyReach += dayData.reach;
+          dailyEng += dayData.engagement;
+        }
+      });
+
+      return { name: day, reach: dailyReach, engagement: dailyEng };
     });
 
     return {
@@ -80,33 +88,33 @@ export const Dashboard: React.FC = () => {
   }, [accounts, selectedPlatform]);
 
   if (!hasConnections) {
-     return (
-       <div className="space-y-6 animate-fade-in">
-          <div className="bg-blue-600/10 border border-blue-600/20 p-6 rounded-2xl flex items-center justify-between">
-             <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-600 rounded-full text-white animate-pulse">
-                   <AlertTriangle size={24} />
-                </div>
-                <div>
-                   <h2 className="text-xl font-bold text-white">{t('dashboard.demoMode')}</h2>
-                   <p className="text-blue-200">{t('dashboard.demoSubtitle')}</p>
-                </div>
-             </div>
-             <button className="px-6 py-2 bg-white text-blue-900 font-bold rounded-xl hover:bg-blue-50 transition-colors">
-                {t('dashboard.connectAccounts')}
-             </button>
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="bg-blue-600/10 border border-blue-600/20 p-6 rounded-2xl flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-600 rounded-full text-white animate-pulse">
+              <AlertTriangle size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-white">{t('dashboard.demoMode')}</h2>
+              <p className="text-blue-200">{t('dashboard.demoSubtitle')}</p>
+            </div>
           </div>
-          
-          <div className="opacity-50 pointer-events-none filter grayscale-[0.5]">
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <StatCard title={t('dashboard.reachGrowth')} value="0" icon={Users} trend={0} color="text-slate-500" />
-                <StatCard title={t('dashboard.avgEngagement')} value="0%" icon={TrendingUp} trend={0} color="text-slate-500" />
-                <StatCard title={t('dashboard.linkClicks')} value="0" icon={MousePointerClick} trend={0} color="text-slate-500" />
-                <StatCard title={t('dashboard.adSpend')} value="$0" icon={DollarSign} trend={0} color="text-slate-500" />
-             </div>
+          <button className="px-6 py-2 bg-white text-blue-900 font-bold rounded-xl hover:bg-blue-50 transition-colors">
+            {t('dashboard.connectAccounts')}
+          </button>
+        </div>
+
+        <div className="opacity-50 pointer-events-none filter grayscale-[0.5]">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <StatCard title={t('dashboard.reachGrowth')} value="0" icon={Users} trend={0} color="text-slate-500" />
+            <StatCard title={t('dashboard.avgEngagement')} value="0%" icon={TrendingUp} trend={0} color="text-slate-500" />
+            <StatCard title={t('dashboard.linkClicks')} value="0" icon={MousePointerClick} trend={0} color="text-slate-500" />
+            <StatCard title={t('dashboard.adSpend')} value="$0" icon={DollarSign} trend={0} color="text-slate-500" />
           </div>
-       </div>
-     );
+        </div>
+      </div>
+    );
   }
 
   if (!aggregatedStats) return <div>{t('common.loading')}</div>;
@@ -117,26 +125,26 @@ export const Dashboard: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-white font-display">{t('common.dashboard')}</h1>
           <p className="text-slate-400 text-sm">
-             {t('dashboard.overview')} <span className="text-white font-bold">{selectedPlatform === 'ALL' ? t('dashboard.allPlatforms') : selectedPlatform}</span>
+            {t('dashboard.overview')} <span className="text-white font-bold">{selectedPlatform === 'ALL' ? t('dashboard.allPlatforms') : selectedPlatform}</span>
           </p>
         </div>
-        
+
         {/* Platform Filter */}
         <div className="relative group">
-           <div className="absolute inset-0 bg-gradient-to-r from-accent-cyan to-accent-violet rounded-xl blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
-           <div className="relative bg-slate-900 border border-white/10 rounded-xl flex items-center p-1">
-              <div className="px-3 text-slate-500"><Filter size={16} /></div>
-              <select 
-                value={selectedPlatform}
-                onChange={(e) => setSelectedPlatform(e.target.value)}
-                className="bg-transparent text-white text-sm font-medium py-2 pr-8 outline-none cursor-pointer appearance-none"
-              >
-                <option value="ALL">{t('dashboard.allPlatforms')}</option>
-                {accounts.map(a => (
-                  <option key={a.platform} value={a.platform}>{a.platform}</option>
-                ))}
-              </select>
-           </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-accent-cyan to-accent-violet rounded-xl blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
+          <div className="relative bg-slate-900 border border-white/10 rounded-xl flex items-center p-1">
+            <div className="px-3 text-slate-500"><Filter size={16} /></div>
+            <select
+              value={selectedPlatform}
+              onChange={(e) => setSelectedPlatform(e.target.value)}
+              className="bg-transparent text-white text-sm font-medium py-2 pr-8 outline-none cursor-pointer appearance-none"
+            >
+              <option value="ALL">{t('dashboard.allPlatforms')}</option>
+              {accounts.map(a => (
+                <option key={a.platform} value={a.platform}>{a.platform}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -155,7 +163,7 @@ export const Dashboard: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
               <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} reversed={isRTL} />
               <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} orientation={isRTL ? "right" : "left"} />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{ backgroundColor: 'rgba(20, 11, 46, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#f8fafc' }}
                 cursor={{ fill: 'rgba(255,255,255,0.05)' }}
               />
@@ -172,7 +180,7 @@ export const Dashboard: React.FC = () => {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
               <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} reversed={isRTL} />
               <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} orientation={isRTL ? "right" : "left"} />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{ backgroundColor: 'rgba(20, 11, 46, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#f8fafc' }}
               />
               <Line type="monotone" dataKey="reach" stroke="#ff0099" strokeWidth={3} dot={{ r: 4, fill: '#ff0099', strokeWidth: 0 }} activeDot={{ r: 6, fill: '#fff' }} />

@@ -1,0 +1,182 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PlanTier {
+  FREE
+  STARTER
+  PRO
+  AGENCY
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(USER)
+  plan      String   @default("starter")
+  companyId String?  // Last accessed company
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  companies Company[]
+}
+
+model Company {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  name            String
+  industry        String
+  description     String
+  website         String?
+  targetAudience  String
+  competitors     String[]
+  goals           String[]
+  language        String   @default("en")
+  
+  branding        Branding?
+  socialAccounts  SocialAccount[]
+  assets          Asset[]
+  marketingPlan   MarketingPlan?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Branding {
+  id            String  @id @default(uuid())
+  companyId     String  @unique
+  company       Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  
+  // Logos
+  logoUrl       String? // Primary
+  logoDarkUrl   String?
+  logoLightUrl  String?
+  faviconUrl    String?
+  
+  // Colors
+  primaryColor  String
+  secondaryColor String
+  accentColor   String?
+  backgroundColor String?
+  
+  // Typography
+  fontPairing   String // Keep for backward compatibility or general style
+  fontHeading   String?
+  fontBody      String?
+  
+  // Assets
+  coverImageUrl String?
+  socialBannerUrl String?
+  businessCardFrontUrl String?
+  businessCardBackUrl String?
+  
+  // Voice & Strategy
+  styleGuide    String?
+  mood          String?
+  voiceTone     String?
+  brandValues   String[]
+  voiceDos      String[]
+  voiceDonts    String[]
+  
+  // New Fields
+  stylePreferences String?
+  tags          String[]
+}
+
+model SocialAccount {
+  id              String   @id @default(uuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  platform        String   // Facebook, Instagram, etc.
+  connected       Boolean  @default(false)
+  handle          String?
+  accessToken     String?
+  refreshToken    String?
+  tokenExpiresAt  DateTime?
+  
+  // Metrics snapshot
+  followers       Int      @default(0)
+  engagementRate  Float    @default(0)
+  
+  updatedAt       DateTime @updatedAt
+}
+
+model Asset {
+  id          String   @id @default(uuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  url         String
+  type        String   // image, video, doc
+  name        String
+  description String?
+  category    String?
+  uploadDate  DateTime @default(now())
+}
+
+model MarketingPlan {
+  id              String   @id @default(uuid())
+  companyId       String   @unique
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  weeklyThemes    String[]
+  strategySummary String
+  
+  posts           Post[]
+  ads             AdCampaign[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Post {
+  id              String   @id @default(uuid())
+  planId          String
+  plan            MarketingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  date            DateTime
+  platform        String
+  type            String
+  content         String
+  assetUrl        String?
+  status          String   @default("draft") // draft, scheduled, published
+  
+  likes           Int      @default(0)
+  shares          Int      @default(0)
+  comments        Int      @default(0)
+}
+
+model AdCampaign {
+  id              String   @id @default(uuid())
+  planId          String
+  plan            MarketingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  name            String
+  platform        String
+  objective       String
+  budget          Float
+  status          String   @default("draft")
+  
+  adSets          AdSet[]
+}
+
+model AdSet {
+  id              String     @id @default(uuid())
+  campaignId      String
+  campaign        AdCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  targetAudience  String
+  creativeUrl     String
+  copy            String
+}

@@ -1,47 +1,47 @@
-
-import { db } from './dbService';
+import api from './api';
 import { User, Role } from '../types';
+
+const TOKEN_KEY = 'nexus_token';
+const USER_KEY = 'nexus_user';
 
 export const authService = {
   login: async (email: string, password: string): Promise<User> => {
-    // Simulate network delay
-    await new Promise(r => setTimeout(r, 800));
+    const response = await api.post('/auth/login', { email, password });
+    const { token, user } = response.data;
 
-    const user = db.findUserByEmail(email);
-    
-    if (!user) throw new Error("User not found");
-    if (user.password !== password) throw new Error("Invalid password");
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
 
-    db.setSession(user);
     return user;
   },
 
   register: async (name: string, email: string, password: string): Promise<User> => {
-    await new Promise(r => setTimeout(r, 800));
+    const response = await api.post('/auth/register', { name, email, password });
+    const { token, user } = response.data;
 
-    const existing = db.findUserByEmail(email);
-    if (existing) throw new Error("Email already exists");
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
 
-    const newUser: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      name,
-      email,
-      password, 
-      role: Role.USER,
-      plan: 'starter',
-      createdAt: new Date()
-    };
-
-    db.saveUser(newUser);
-    db.setSession(newUser);
-    return newUser;
+    return user;
   },
 
   logout: async () => {
-    db.clearSession();
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    // Optional: Call backend logout if needed
   },
 
   getCurrentUser: (): User | null => {
-    return db.getSession();
+    const userStr = localStorage.getItem(USER_KEY);
+    if (!userStr) return null;
+    try {
+      return JSON.parse(userStr);
+    } catch {
+      return null;
+    }
+  },
+
+  isAuthenticated: (): boolean => {
+    return !!localStorage.getItem(TOKEN_KEY);
   }
 };

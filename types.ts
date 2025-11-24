@@ -107,9 +107,9 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  password?: string; 
+  password?: string;
   role: Role;
-  plan: string; 
+  plan: string;
   companyId?: string; // Keeps track of last accessed company
   createdAt: Date;
 }
@@ -177,16 +177,33 @@ export interface SocialAccount {
 
 export interface BrandIdentity {
   logoUrl?: string;
+  logoDarkUrl?: string;
+  logoLightUrl?: string;
+  faviconUrl?: string;
   primaryColor: string;
   secondaryColor: string;
+  accentColor?: string;
+  backgroundColor?: string;
   fontPairing: string;
+  fontHeading?: string;
+  fontBody?: string;
+  coverImageUrl?: string;
+  socialBannerUrl?: string;
+  businessCardFrontUrl?: string;
+  businessCardBackUrl?: string;
   styleGuide?: string;
   mood?: string;
+  voiceTone?: string;
+  brandValues?: string[];
+  voiceDos?: string[];
+  voiceDonts?: string[];
+  stylePreferences?: string;
+  tags?: string[];
 }
 
 export interface CompanyProfile {
   id: string;
-  userId: string; 
+  userId: string;
   language: 'en' | 'ar';
   userName?: string;
   userInterests?: string;
@@ -197,7 +214,7 @@ export interface CompanyProfile {
   targetAudience: string;
   competitors: string[];
   goals: string[];
-  socialAccounts: SocialAccount[]; 
+  socialAccounts: SocialAccount[];
   branding: BrandIdentity;
   designPreferences?: string;
   assets: UploadedAsset[];
@@ -208,7 +225,7 @@ export interface Post {
   date: Date;
   platform: 'Instagram' | 'LinkedIn' | 'Twitter' | 'TikTok' | 'YouTube';
   type: 'image' | 'video' | 'carousel' | 'story';
-  content: string; 
+  content: string;
   assetUrl?: string;
   status: 'draft' | 'scheduled' | 'published';
   metrics?: {
